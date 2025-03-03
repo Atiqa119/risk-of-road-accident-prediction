@@ -7,86 +7,56 @@ Original file is located at
     https://colab.research.google.com/drive/1EtQ-Q8EQHEL8qZAJLK6jcVvoYD1lht2O
 """
 
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error
-
-df = pd.read_csv("road_accident_risk_prediction.csv")
-
-df
-
-from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
-import pandas as pd
-data = pd.read_csv("road_accident_risk_prediction.csv")
-X=data[['Traffic_Volume', 'Speed_Limit', 'Speed_Violations', 'Number_of_Lanes',   'Visibility_Distance', 'Temperature',  'Past_Accident_Count',  'Emergency_Response_Time']] # Independent variables
-y =data['Accident_Probability'] # Dependent variable
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2,
-random_state=42)
-model = LinearRegression()
-model.fit(X_train, y_train)
-predictions = model.predict(X_test)
-print("MSE:", mean_squared_error(y_test, predictions))
-
-from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
-from sklearn.preprocessing import LabelEncoder
-import pandas as pd
-
-# Load your dataset
-data = pd.read_csv("road_accident_risk_prediction.csv")
-
-# Encode categorical variables (if any, such as 'Weather_Condition' or 'Road_Surface_Condition')
-label_encoder = LabelEncoder()
-data['Road_Type'] = label_encoder.fit_transform(data['Road_Type'])
-data['Road_Surface_Condition'] = label_encoder.fit_transform(data['Road_Surface_Condition'])
-data['Weather_Condition'] = label_encoder.fit_transform(data['Weather_Condition'])
-data['Time_of_Day'] = label_encoder.fit_transform(data['Time_of_Day'])
-data['Severity_of_Past_Accidents'] = label_encoder.fit_transform(data['Severity_of_Past_Accidents'])
-
-# Define independent variables (features) and dependent variable (target)
-X = data[['Traffic_Volume', 'Speed_Limit', 'Speed_Violations', 'Number_of_Lanes',
-          'Road_Surface_Condition', 'Weather_Condition', 'Visibility_Distance',
-          'Temperature', 'Time_of_Day', 'Past_Accident_Count', 'Severity_of_Past_Accidents',
-          'Emergency_Response_Time']]  # Independent variables
-y = data['Accident_Probability']  # Dependent variable (target)
-
-# Split the data into training and testing sets (80% training, 20% testing)
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-# Initialize and train the Linear Regression model
-model = LinearRegression()
-model.fit(X_train, y_train)
-
-# Predict the target variable on the test set
-predictions = model.predict(X_test)
-
-# Evaluate the model's performance using Mean Squared Error
-mse = mean_squared_error(y_test, predictions)
-print("Mean Squared Error:", mse)
-
-# Save Model
-with open("linear_model.pkl", "wb") as file:
-    pickle.dump(model, file)
-
-!pip install streamlit
-
 import streamlit as st
 import numpy as np
 import pickle
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+st.title("Road Accident Risk Prediction")
+st.write("This is a simple Streamlit app for predicting accident risk.")
+
 
 # Load trained model
 model = pickle.load(open("linear_model.pkl", "rb"))
 
-# Streamlit App UI
-st.title("Road Accident Risk Prediction")
-st.write("This is a simple Streamlit app for predicting accident risk.")
+# Upload dataset for visualization
+uploaded_file = st.file_uploader("Upload CSV file for trend analysis", type=["csv"])
+
+if uploaded_file:
+    df = pd.read_csv(uploaded_file)
+    st.write("### Dataset Preview")
+    st.dataframe(df.head())
+
+    # Display dataset summary
+    st.write("### Dataset Summary")
+    st.write(df.describe())
+
+    # Correlation heatmap
+    st.write("### Correlation Heatmap")
+    fig, ax = plt.subplots(figsize=(10,6))
+    sns.heatmap(df.corr(), annot=True, cmap="coolwarm", fmt=".2f", ax=ax)
+    st.pyplot(fig)
+
+    # Pairplot visualization
+    st.write("### Feature Pairplot")
+    fig = sns.pairplot(df)
+    st.pyplot(fig)
+
+    # Scatter plot of user-selected features
+    numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+    x_feature = st.selectbox("Select Feature for X-Axis", numeric_cols)
+    y_feature = st.selectbox("Select Feature for Y-Axis", numeric_cols)
+
+    if x_feature and y_feature:
+        st.write(f"### Scatter Plot: {x_feature} vs {y_feature}")
+        fig, ax = plt.subplots(figsize=(8,5))
+        sns.scatterplot(x=df[x_feature], y=df[y_feature], ax=ax)
+        plt.xlabel(x_feature)
+        plt.ylabel(y_feature)
+        plt.title(f"{x_feature} vs {y_feature}")
+        st.pyplot(fig)
+
 
 # User Inputs
 road_type = st.selectbox("Road Type", ["Urban", "Rural", "Highway"])
@@ -117,10 +87,10 @@ time_of_day_num = time_of_day_map[time_of_day]
 
 # Prediction Button
 if st.button("Predict"):
-    input_data = np.array([[road_type_num, traffic_volume, speed_limit, speed_violations,
-                            num_lanes, road_surface_num, weather_num, visibility,
-                            temperature, time_of_day_num, past_accidents, past_severity,
+    input_data = np.array([[road_type_num, traffic_volume, speed_limit, speed_violations, 
+                            num_lanes, road_surface_num, weather_num, visibility, 
+                            temperature, time_of_day_num, past_accidents, past_severity, 
                             response_time]])
-
+    
     prediction = model.predict(input_data)
     st.success(f"Predicted Accident Probability: {prediction[0]:.2f}")
